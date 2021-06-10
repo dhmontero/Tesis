@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.link {
+  stroke: #aaa;
+}
+
+.node text {
+stroke:#333;
+cursor:pointer;
+}
+
+.node circle {
+stroke: #fff;
+stroke-width: 1.5px;
+fill:#555;
+}
+
+.d3-tip {
+  line-height: 1;
+  font-weight: bold;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 2px;
+}
+
+/* Creates a small triangle extender for the tooltip */
+.d3-tip:after {
+  box-sizing: border-box;
+  display: inline;
+  font-size: 14px;
+  width: 100%;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.8);
+  content: "\25BC";
+  position: absolute;
+  text-align: center;
+}
+
+/* Style northward tooltips differently */
+.d3-tip.n:after {
+  margin: -1px 0 0 0;
+  top: 100%;
+  left: 0;
+}
+    
+</style>
+<body>
+    <h2>DIAGRAMA DE RED</h2>
+    <div id="main3" style="float: left">
+    <div class="slidecontainer">
+        <input type="range" min="0" max="1" step="0.005" value="0.5" class="slider" id="myRange" onclick="updateNetwork()">
+        <p>Value: <span id="demo"></span></p>
+    </div>
+    <div>
+        <div id="cat" ><h3>Categorias</h3></div>
+        <div id="cand" ><h3>Candidatos</h3></div>
+    </div> 
+<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<script>
+var store=[];
+var indexCat = [];
+var indexCand = [];
+var isNew = 0;
+var linkpath = ("links.csv"); //archivo de enlaces
+var nodepath = ("nodes.csv"); //archivo de nodos
+
+var width   = 1500, //seteo de tamaño del grafo
+    height  = 1500;
+
+var color = d3.scale.category20(); //Gama de colores seteados por d3.js
+
+var slider = document.getElementById("myRange");
+var output = document.getElementById("demo");
+    output.innerHTML = slider.value;
+    slider.oninput = function() {
+        output.innerHTML = this.value;     
+    } 
+      
+//Want to have different labels
+// SETTING UP THE FORCE LAYOUT
+    
+      
+d3.csv("ValoracionCuantitativo.csv",function(error,data) {store = data; createNetwork(data);}); //Cargamos nuestro archivo de datos y ejecutamos la función create network
+
+function createNetwork(edgelist) {
+  var nodeHash = {};
+  var nodes = [];
+  var edges = [];
+  var candidatos = [];
+  var categorias = [];
+  var aux = 0;
+  var aux2 = 0;
+
+  var tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-10, 0])
+  .html(function(d) {
+    return "<strong>Candidato:</strong> <span style='color:pink'>" + d.cnd + "</span>";
+  })
+  
+  var tip2 = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-10, 0])
+  .html(function(d) {
+    return "<strong>Sim:</strong> <span style='color:red'>" +parseFloat(d.weight).toFixed(2)*10+ "%"+ "</span>";
+  })
+    
+  var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+  
+  svg.call(tip);
+  svg.call(tip2);
+    
+  var force = d3.layout.force()
+    .gravity(.08)  //atracción entre nodos principales
+    .distance(100) //separacion nodos principales - nodos de borde
+    .charge(-500)  //separación entre nodos de borde
+    .size([width, height]); // tamaño del gráfico
+    
+    
+  obtCand(store);
+  obtCat(store);
+  isNew = 1;
+
+  edgelist.forEach(function (edge) { //Funcion que selecciona del archivo los nodos principales (categorias) y los guarda en un archivo especifico
+    if ((!(nodeHash[0]) || !(nodeHash[aux-1].label == edge.categoria.toUpperCase())) && !(indexCat.includes(edge.categoria)) && !(indexCand.includes(edge.candidato))) { //verifica que no se repita la categoria
+        nodeHash[aux] = {id: String(aux + 1), label: edge.categoria.toUpperCase(), group: 2, cnd: null};
+        nodes[aux] = nodeHash[aux];
+        aux++;
+    }  
+  })
+
+  edgelist.forEach(function (edge) { //Funcion que selecciona del archivo los nodos secundarias (palabras) y los guarda en un archivo especifico
+    if(!(nodes.some(node => (node.label === edge.word && node.cnd === edge.candidato))) && edge.sim > slider.value && !(indexCat.includes(edge.categoria))&& !(indexCand.includes(edge.candidato))){ //verifica que no se repita la palabra
+        nodeHash[aux] = {id: String(aux + 1), label: edge.word, group: 1, cnd: edge.candidato};
+        nodes[aux] = nodeHash[aux];
+        aux++;        
+    }
+  })
+  edgelist.forEach(function (edge) { //Funcion que enlaza los nodos principales con los secundarios en pares de acuerdo a su relación
+    if(edge.sim > slider.value && !(indexCat.includes(edge.categoria)) && !(indexCand.includes(edge.candidato)) ){
+        var src = nodes[nodes.findIndex(node => node.label === edge.categoria.toUpperCase())];
+        var trg = nodes[nodes.findIndex(node => (node.label === edge.word && node.cnd === edge.candidato))];
+        var wgt = String(edge.sim*10);
+        var temp = {source: src, target: trg, weight: String(wgt)}
+        edges[aux2] = temp;
+        aux2++;
+    }
+  })
+    
+    force.nodes(nodes).links(edges).start();
+    console.log(edges);
+var link = svg.selectAll(".link")
+    .data(edges) //Asignacion de la data para cada enlace 
+    .enter().append("line") //Por cada enlace se genera una linea
+    .attr("class", "link")  //Se setean las caracteristica de .link
+    .style("stroke-width", function(d) { return Math.sqrt(d.weight); });
+        
+  // Create the node circles.
+  var node = svg.selectAll(".node")
+      .data(nodes) //Asignación de la data para cada nodo
+      .enter().append("g") //Por cada nodo se agrega un circulo
+      .attr("class", "node") //Se setean las caracteristicas de .node
+      .call(force.drag);
+ 
+  node.append("circle") //Caracteristicas de los nodos
+      .attr("r", function(d) { return String(d.group*10); })
+      .style("fill", function(d) { if(d.cnd === null){return color(d.group);} else if (d.cnd === "duque"){return "#CC33CC"}else if (d.cnd === "petro"){return "	#00CC99"}  })
+      .on('mouseover', tip.show)
+      .on('mouseout', tip.hide);
+
+  node.append("text") //Caractersiticas del texto de los nodos
+      .attr("dx", 20) //Ubicación respecto al nodo en X
+      .attr("dy", ".35em") //Ubicacion respecto al nodo en Y
+      .style("fill","black") // Estilo del texto
+      .text(function(d) {if(d.group == 2){return d.label}else{return d.label}}); //Texto a mostrar por nodo
+    
+  link.on('mouseover', tip2.show)
+      .on('mouseout', tip2.hide);
+
+
+  force.on("tick", function() {
+    var k = 0;
+    while ((force.alpha() > 1) && (k < 150)) {
+        force.tick();
+        k = k + 10;
+    }
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+  });
+}
+    
+function updateNetwork(){
+    d3.select("svg").remove();
+    d3.csv("ValoracionCuantitativo.csv",function(error,data) {createNetwork(store)});
+}
+
+function obtCand(datos){
+    var aux=0;
+    var result = datos.reduce((result,d) => {
+        let temp = {"IdCand": aux + 1 , "NomCand": d.candidato};
+        if ( result[aux] == undefined || result[aux].NomCand == d.candidato){
+            result[aux] = temp;
+        }
+        else if (result[aux].NomCand!= d.candidato)
+        {
+            aux = aux + 1;
+            result[aux] = temp;
+        }
+        return result;  
+    },{});
+    result = Object.keys(result).map(key => result[key])
+    result = sinRep(result);
+    candidatos = result;
+    if(isNew == 0){
+        checkBCandidatos(candidatos);  
+    }
+    return result;
+}
+
+function obtCat(datos){
+    var aux=0;
+    var result =[]
+    result = datos.reduce((result,d) => {
+        var temp = {"CatID": aux + 1, "NomCat": d.categoria};
+        if ( result[aux] == undefined || result[aux].NomCat == d.categoria)
+            result[aux] = temp;
+        else if (result[aux].NomCat != d.categoria)
+           aux = aux + 1;
+            result[aux] = temp;
+        result = Object.keys(result).map(key => result[key])
+        return result;
+    },{});
+    categorias = result;
+    if(isNew == 0){
+         checkBCategorias(categorias);   
+    }
+    return result;
+}
+
+function checkBCandidatos(cand){
+    var aux = 0
+     cand.forEach(elemento => {
+        var node = document.createElement('div');        
+        node.innerHTML = '<input type="checkbox" id="checkC'+aux+'" checked="" onclick="isCheck()"><label for="checkC'+aux+'">'+elemento.NomCand+'</label><br>'; 
+        document.getElementById('cand').appendChild(node);
+        aux=aux+1;
+    })
+}
+
+function checkBCategorias(cat){
+    var aux = 0
+    cat.forEach(elemento => {
+        var node = document.createElement('div');        
+        node.innerHTML = '<input type="checkbox" id="check'+aux+'" checked="" onclick="isCheck()"><label for="check'+aux+'">'+elemento.NomCat+'</label><br>'; 
+        document.getElementById('cat').appendChild(node);
+        aux=aux+1;
+    })
+}
+
+function sinRep(result){
+    let aux = 0;
+    let result1 = [];
+    result.forEach(element => {
+        if(result1.length == 0){
+            result1.push(element);
+        }
+        else if (result1.length > 0){
+            result1.forEach(el => {
+            if(el.NomCand == element.NomCand){
+           aux = 1;
+            }
+        })
+    if(aux != 1){
+        result1.push(element);
+        aux = 0;
+    }
+    }
+     })
+    return result1;
+}
+
+function isCheck(){
+    var aux;
+    var aux1=0;
+    var aux2;
+    var aux3=0;
+    indexCand=[];
+    indexCat = [];
+    for(aux = 0;aux < categorias.length;aux++){   
+        var isChecked = document.getElementById('check'+aux+'').checked;
+        if(isChecked != true){
+            indexCat[aux1] = categorias[aux].NomCat;
+            aux1=aux1+1;;
+        }
+    }
+    for(aux2 = 0;aux2 < candidatos.length;aux2++){   
+        var isChecked2 = document.getElementById('checkC'+aux2+'').checked;
+        if(isChecked2 != true){
+            indexCand[aux3] = candidatos[aux2].NomCand;
+            aux3=aux3+1;
+        }
+    }
+    console.log(indexCat);
+    console.log(indexCand);
+    updateNetwork();
+}
+    
+    
+</script>
