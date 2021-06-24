@@ -1,4 +1,6 @@
-*{
+*,
+*::before,
+*::after{
 	margin: 0;
 	padding: 0;
 	-webkit-box-sizing: border-box;
@@ -6,30 +8,41 @@
 	box-sizing: border-box;
 }
 
+
+html{
+	height:100%;
+	width:100%;
+}
 body{
-	background: #D4D4D4;
-	font-family: 'Open sans';
+	height: 100%;
+	width: 100%;
+	font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif
 }
 
 .wrap{
-	width: 1300px;
-	max-width: 100%;
-	margin: 5px auto;
+	height:100%;
 }
 
 .cabecera{
-	width: 100%;
-	background:lightskyblue;
-	margin: 5px auto;
-	height: 150px;
+	background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.979)), url("/assets/img/background.jpg");
+	display: flex;
+	flex-direction:column;
+	align-items:center;
+	justify-content: center;
+	text-transform: uppercase;
+	letter-spacing: 20px;
+	padding-bottom: 10px;
+	background-color: #fff;
+	font-size: 20px;
+	text-align: center;
 	
 }
 
-.cabecera h1{
-	font-size: 22pt;
-	font-family: 'Lucida Sans';
-	text-align: center;
-	justify-content: center;
+.cabecera>img{
+	width: 230px;
+	height: 180px;
+	margin-top: 10px;
+	margin-bottom: 20px;
 }
 
 ul.tabs{
@@ -63,6 +76,7 @@ ul.tabs li a .tab-text{
 
 .secciones{
 	width: 100%;
+
 	background: #fff;
 	margin: 5px auto;
 }
@@ -75,7 +89,50 @@ ul.tabs li a .tab-text{
 	text-align: justify;
 }
 
-
+article{
+	height:100%;
+}
+.tab-text{
+	display:inline-block;
+	font-size: 20px;
+}
+.tab-text:hover{
+	font-weight: 600;
+}
+#tab1{
+	background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.979)), url("/assets/img/about.jpg");
+	padding:80px 110px;
+	display:flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background-size: cover;
+}
+#tab1 h1{
+	padding-bottom: 20px;
+	font-size: 60px;
+	letter-spacing: 3px;
+	color: #0984CC;
+}
+#tab1 p{
+	font-size: 25px;
+	color: white;
+}
+.about{
+	background: rgba(10, 9, 9, 0.877);
+	text-align: center;
+	padding: 80px;
+	border-radius: 20px;
+}
+#tab2{
+	height:1990px;
+}
+#tab3{
+	height:2180px;
+}
+#tab4{
+	height:2050px;
+}
 @media screen and (max-width: 700px){
 	ul.tabs li{
 		width: none;
